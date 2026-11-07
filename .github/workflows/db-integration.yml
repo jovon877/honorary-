@@ -30,7 +30,6 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
-          cache: pnpm
       - run: corepack enable
       - run: corepack prepare pnpm@12.15.0 --activate
       - run: pnpm install --frozen-lockfile
@@ -59,13 +58,13 @@ jobs:
     env:
       PGPASSWORD: FIXTURE-ci-postgres-only
       DATABASE_OWNER_URL: postgresql://migration_owner:FIXTURE-ci-owner-only@127.0.0.1:5432/postgres
+      DATABASE_FIXTURE_URL: postgresql://test_fixture_admin:FIXTURE-ci-fixture-only@127.0.0.1:5432/postgres
       DATABASE_URL: postgresql://app_login:FIXTURE-ci-app-only@127.0.0.1:5432/postgres
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
-          cache: pnpm
       - run: corepack enable
       - run: corepack prepare pnpm@12.15.0 --activate
       - run: pnpm install --frozen-lockfile
@@ -78,8 +77,10 @@ jobs:
           CREATE ROLE commerce_writer NOLOGIN NOSUPERUSER NOBYPASSRLS;
           CREATE ROLE credential_issuer NOLOGIN NOSUPERUSER NOBYPASSRLS;
           CREATE ROLE academy_rls_helper NOLOGIN NOSUPERUSER BYPASSRLS;
+          CREATE ROLE test_fixture_admin LOGIN NOSUPERUSER BYPASSRLS PASSWORD 'FIXTURE-ci-fixture-only';
           GRANT app_rw TO app_login;
           GRANT app_rw, commerce_writer, credential_issuer, academy_rls_helper TO migration_owner WITH ADMIN OPTION;
+          GRANT migration_owner TO test_fixture_admin;
           SQL
       - name: Run the database suite as app_login
         run: pnpm test:db

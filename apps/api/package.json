@@ -1,0 +1,19 @@
+{
+  "name": "@honorary-homes/api",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": "./src/index.ts",
+  "engines": {
+    "node": "26.13.0"
+  },
+  "dependencies": {
+    "@honorary-homes/catalog": "workspace:0.0.0",
+    "@honorary-homes/credentials": "workspace:0.0.0",
+    "@honorary-homes/database": "workspace:0.0.0",
+    "@honorary-homes/identity": "workspace:0.0.0",
+    "@honorary-homes/security": "workspace:0.0.0",
+    "@honorary-homes/sim-xapi": "workspace:0.0.0"
+  }
+}
