@@ -1,20 +1,30 @@
 import { access, readFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
+import { lintClaims } from "@honorary-homes/security";
 import { walkFiles } from "./walk.js";
 
-const textExtensions = new Set([".css", ".html", ".json", ".md", ".ts", ".tsx", ".yaml", ".yml"]);
-const forbidden = [
-  /\bcertified\b/gi,
-  /\blicensed\b/gi,
-  /\bOSHA\s*10(?:\s+card)?\b/gi,
-  /\bguaranteed job\b/gi,
-  /\bRegistered Apprenticeship\b/gi,
-  /\b(?:gore|graphic injury|you would have died)\b/gi,
-];
+const targets = [
+  { root: "apps", extensions: new Set([".css", ".html", ".json", ".md", ".ts", ".tsx"]) },
+  {
+    root: "packages/sim-content",
+    extensions: new Set([".json", ".md", ".ts", ".yaml", ".yml"]),
+  },
+  {
+    root: "content",
+    extensions: new Set([".html", ".json", ".md", ".ts", ".tsx", ".txt", ".yaml", ".yml"]),
+  },
+  {
+    root: "certificates",
+    extensions: new Set([".html", ".json", ".md", ".txt", ".yaml", ".yml"]),
+  },
+  {
+    root: "generated-drafts",
+    extensions: new Set([".html", ".json", ".md", ".txt", ".yaml", ".yml"]),
+  },
+] as const;
 const findings: string[] = [];
-const roots = ["apps", "packages", "workers", "content", "certificates", "generated-drafts"];
-for (const root of roots) {
-  const rootPath = resolve(root);
+for (const target of targets) {
+  const rootPath = resolve(target.root);
   try {
     await access(rootPath);
   } catch {
@@ -22,13 +32,14 @@ for (const root of roots) {
   }
   for (const file of await walkFiles(rootPath)) {
     const path = relative(resolve("."), file);
+    if (/\.(test|spec)\.[cm]?[jt]sx?$/.test(path)) continue;
     const extension = path.slice(path.lastIndexOf("."));
-    if (!textExtensions.has(extension)) continue;
+    if (!target.extensions.has(extension)) continue;
     const text = await readFile(file, "utf8");
-    for (const pattern of forbidden) {
-      pattern.lastIndex = 0;
-      const match = pattern.exec(text);
-      if (match) findings.push(`${path}: banned claim “${match[0]}”`);
+    for (const finding of lintClaims(text)) {
+      findings.push(
+        `${path}:${finding.index}: ${finding.ruleId}: banned claim “${finding.match}” — ${finding.message}`,
+      );
     }
   }
 }

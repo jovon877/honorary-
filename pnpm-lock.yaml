@@ -172,9 +172,33 @@ importers:
       '@axe-core/playwright':
         specifier: 4.14.0
         version: 4.14.0(playwright-core@1.64.1)
+      '@electric-sql/pglite':
+        specifier: 0.5.11
+        version: 0.5.11
       '@eslint/js':
         specifier: 10.0.1
         version: 10.0.1(eslint@10.13.0(supports-color@7.2.0))
+      '@honorary-homes/authorization':
+        specifier: workspace:0.0.0
+        version: link:packages/authorization
+      '@honorary-homes/catalog':
+        specifier: workspace:0.0.0
+        version: link:packages/catalog
+      '@honorary-homes/credentials':
+        specifier: workspace:0.0.0
+        version: link:packages/credentials
+      '@honorary-homes/database':
+        specifier: workspace:0.0.0
+        version: link:packages/database
+      '@honorary-homes/publishing':
+        specifier: workspace:0.0.0
+        version: link:packages/publishing
+      '@honorary-homes/security':
+        specifier: workspace:0.0.0
+        version: link:packages/security
+      '@honorary-homes/sim-xapi':
+        specifier: workspace:0.0.0
+        version: link:packages/sim-xapi
       '@playwright/test':
         specifier: 1.64.1
         version: 1.64.1
@@ -224,6 +248,27 @@ importers:
         specifier: 4.1.12
         version: 4.1.12(@types/node@26.6.5)(@vitest/coverage-v8@4.1.12)(jsdom@30.1.3)(vite@8.3.5(@types/node@26.6.5)(esbuild@0.28.2)(tsx@4.23.15))
 
+  apps/api:
+    dependencies:
+      '@honorary-homes/catalog':
+        specifier: workspace:0.0.0
+        version: link:../../packages/catalog
+      '@honorary-homes/credentials':
+        specifier: workspace:0.0.0
+        version: link:../../packages/credentials
+      '@honorary-homes/database':
+        specifier: workspace:0.0.0
+        version: link:../../packages/database
+      '@honorary-homes/identity':
+        specifier: workspace:0.0.0
+        version: link:../../packages/identity
+      '@honorary-homes/security':
+        specifier: workspace:0.0.0
+        version: link:../../packages/security
+      '@honorary-homes/sim-xapi':
+        specifier: workspace:0.0.0
+        version: link:../../packages/sim-xapi
+
   apps/sim-player:
     dependencies:
       '@honorary-homes/config':
@@ -264,9 +309,30 @@ importers:
         specifier: 8.3.5
         version: 8.3.5(@types/node@26.6.5)(esbuild@0.28.2)(tsx@4.23.15)
 
+  packages/authorization: {}
+
+  packages/catalog: {}
+
   packages/config: {}
 
+  packages/credentials:
+    dependencies:
+      '@honorary-homes/security':
+        specifier: workspace:0.0.0
+        version: link:../security
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+
+  packages/database: {}
+
   packages/design-tokens: {}
+
+  packages/identity: {}
+
+  packages/publishing: {}
+
+  packages/security: {}
 
   packages/sim-assets:
     dependencies:
@@ -276,6 +342,9 @@ importers:
 
   packages/sim-content:
     dependencies:
+      '@honorary-homes/publishing':
+        specifier: workspace:0.0.0
+        version: link:../publishing
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -288,7 +357,11 @@ importers:
 
   packages/sim-ui: {}
 
-  packages/sim-xapi: {}
+  packages/sim-xapi:
+    dependencies:
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
 
   packages/testing: {}
 
@@ -445,6 +518,9 @@ packages:
 
   '@dimforge/rapier3d-compat@0.12.0':
     resolution: {integrity: sha512-uekIGetywIgopfD97oDL5PfeezkFpNhwlzlaEYNOA0N6ghdsOvh/HYjSMek5Q2O1PYvRSDFcqFVJl4r4ZBwOow==}
+
+  '@electric-sql/pglite@0.5.11':
+    resolution: {integrity: sha512-SWuqsTjA4DDWqgZ05PC1RJaq8e00p5KACxbqaikDFQ8dIGA0SLRzuPniky7IW+q/c5RDNMdEXwv7mFBWIx9Hxw==}
 
   '@esbuild/aix-ppc64@0.28.2':
     resolution: {integrity: sha512-XExcO+dvLKvVtNTibSTBej1NCAbaGhWn9Ww1ZPx80qsahhPFe/8jgWP0IchNe0F3HwkU7n8ejhH8bjonqht8mQ==}
@@ -2035,6 +2111,8 @@ snapshots:
   '@csstools/css-tokenizer@4.0.2': {}
 
   '@dimforge/rapier3d-compat@0.12.0': {}
+
+  '@electric-sql/pglite@0.5.11': {}
 
   '@esbuild/aix-ppc64@0.28.2':
     optional: true

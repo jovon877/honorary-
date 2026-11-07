@@ -1,0 +1,11 @@
+{
+  "name": "@honorary-homes/database",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": "./src/index.ts",
+  "engines": {
+    "node": "26.13.0"
+  }
+}

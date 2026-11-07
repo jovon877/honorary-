@@ -61,3 +61,14 @@ export function buildSimStatement(
     timestamp: event.occurredAt,
   };
 }
+
+export {
+  MAX_BODY_BYTES,
+  MAX_CLOCK_SKEW_MS,
+  MAX_STATEMENT_AGE_MS,
+  SIM_VERB_IRIS,
+  ingestStatement,
+  type IngestContext,
+  type IngestResult,
+  type SimStatement,
+} from "./ingest.js";

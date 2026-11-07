@@ -1,5 +1,10 @@
 import { z } from "zod";
-import type { SimulationScenario } from "./scenario.js";
+import {
+  canPublishScenario,
+  type Approval as ScenarioApproval,
+  type ReviewType as ScenarioApprovalRole,
+  type ScenarioVersionRef,
+} from "@honorary-homes/publishing";
 
 export const approvalSchema = z.object({
   role: z.string().min(1),
@@ -9,13 +14,6 @@ export const approvalSchema = z.object({
 });
 
 export type Approval = z.infer<typeof approvalSchema>;
-export type ScenarioApprovalRole =
-  | "trade_safety"
-  | "subject_matter"
-  | "accessibility"
-  | "instructional_design"
-  | "compliance"
-  | "publisher";
 export type CourseApprovalRole =
   "curriculum" | "subject_matter" | "accessibility" | "media" | "publisher";
 
@@ -34,21 +32,6 @@ function hasEveryApproval(
   );
 }
 
-export function canPublishScenario(
-  scenario: SimulationScenario,
-  approvals: readonly Approval[],
-): boolean {
-  const roles: ScenarioApprovalRole[] = [
-    ...new Set([...scenario.reviewRequirements, "publisher"]),
-  ] as ScenarioApprovalRole[];
-  return (
-    scenario.status === "approved" &&
-    scenario.accessibility.keyboardPath &&
-    scenario.accessibility.non3dSteps.length > 0 &&
-    hasEveryApproval(roles, approvals, scenario.version)
-  );
-}
-
 export function canPublishCourse(version: number, approvals: readonly Approval[]): boolean {
   const required: CourseApprovalRole[] = [
     "curriculum",
@@ -59,3 +42,10 @@ export function canPublishCourse(version: number, approvals: readonly Approval[]
   ];
   return hasEveryApproval(required, approvals, version);
 }
+
+export {
+  canPublishScenario,
+  type ScenarioApproval,
+  type ScenarioApprovalRole,
+  type ScenarioVersionRef,
+};

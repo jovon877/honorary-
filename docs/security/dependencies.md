@@ -1,4 +1,4 @@
-# Dependency Record — M0
+# Dependency Record — M0 and M0.5
 
 Resolved from `registry.npmjs.org` on 2026-11-06. The eligibility cutoff was 2026-10-23T06:44:02Z. Versions are exact; TypeScript 6.0.3 is the newest eligible release compatible with `typescript-eslint` 8.72.0. Node release data came from `nodejs.org`.
 
@@ -14,6 +14,7 @@ Resolved from `registry.npmjs.org` on 2026-11-06. The eligibility cutoff was 202
 | Package | Version | Published (UTC) | License | Purpose | Used by |
 |---|---:|---|---|---|---|
 | `@axe-core/playwright` | 4.14.0 | 2026-10-15 | MPL-2.0 | Browser accessibility assertions | root tests; dev-only |
+| `@electric-sql/pglite` | 0.5.11 | 2026-10-21 | Apache-2.0 | In-process PostgreSQL migration and RLS tests | root database tests; dev-only |
 | `@eslint/js` | 10.0.1 | 2026-02-06 | MIT | ESLint base rules | root tooling; dev-only |
 | `@playwright/test` | 1.64.1 | 2026-10-14 | Apache-2.0 | Browser and software-WebGL smoke tests | root tests; dev-only |
 | `@types/node` | 26.6.5 | 2026-10-09 | MIT | Node type declarations | root tooling; dev-only |
@@ -40,7 +41,7 @@ Resolved from `registry.npmjs.org` on 2026-11-06. The eligibility cutoff was 202
 | `react-dom` | 19.1.10 | 2026-10-14 | MIT | Browser rendering | sim-player; browser runtime |
 | `three` | 0.186.1 | 2026-09-24 | MIT | Empty 3D shell | sim-player; browser runtime |
 | `@react-three/fiber` | 9.8.2 | 2026-10-14 | MIT | React renderer for Three.js | sim-player; browser runtime |
-| `zod` | 4.6.7 | 2026-10-12 | MIT | Scenario and asset schemas | sim-content and sim-assets; runtime |
+| `zod` | 4.6.7 | 2026-10-12 | MIT | Scenario, xAPI and credential-boundary schemas | sim-content, sim-assets, sim-xapi and credentials; runtime |
 | `xstate` | 5.33.3 | 2026-10-17 | MIT | Renderer-independent state machine | sim-core; runtime |
 | `@gltf-transform/core` | 4.5.1 | 2026-09-28 | MIT | glTF document boundary | asset worker; worker runtime |
 | `@gltf-transform/functions` | 4.5.1 | 2026-09-28 | MIT | Approved future glTF transforms | asset worker; worker runtime |
@@ -51,6 +52,6 @@ Resolved from `registry.npmjs.org` on 2026-11-06. The eligibility cutoff was 202
 ## Verification record
 
 - `pnpm deps:licenses:prod`: passed, 34 package versions.
-- `pnpm deps:licenses:dev`: passed, 244 package versions.
+- `pnpm deps:licenses:dev`: passed, 245 package versions.
 - `pnpm audit --prod`: passed on 2026-11-06; 0 info, low, moderate, high or critical vulnerabilities across 51 reported production/optional dependencies.
 - `docs/security/license-exceptions.md`: empty; no exception was used.

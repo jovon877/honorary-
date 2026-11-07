@@ -57,7 +57,7 @@ export function SimPlayer({ scenarioId, courseVersionId, lessonId, onEvent }: Si
               <p className="label">WebGL shell</p>
               <h2 id="viewport-title">Empty scene ready</h2>
             </div>
-            <span aria-label="Scene status: ready" className="ready-dot" />
+            <span aria-hidden="true" className="ready-dot" />
           </div>
           <div className="viewport" data-testid="webgl-shell">
             <Canvas camera={{ position: [3, 3, 3], fov: 42 }}>

@@ -1,38 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { canPublishCourse, canPublishScenario, type Approval } from "./approvals.js";
-import { scenarioSchema } from "./scenario.js";
+import {
+  canPublishCourse,
+  canPublishScenario,
+  type Approval,
+  type ScenarioApproval,
+  type ScenarioVersionRef,
+} from "./approvals.js";
 
-const fixtureScenario = scenarioSchema.parse({
-  id: "FIXTURE-scenario",
+const fixtureScenario: ScenarioVersionRef = {
+  scenarioId: "FIXTURE-scenario",
   version: 1,
-  courseId: "FIXTURE-course",
-  lessonId: "FIXTURE-lesson",
-  title: "FIXTURE — not real",
-  simType: "exploration",
-  environmentId: "FIXTURE-environment",
-  environmentCondition: "as_found",
-  objectiveIds: ["FIXTURE-objective"],
-  stages: {
-    learn: { id: "learn", instruction: "FIXTURE — not real" },
-    practice: { id: "practice", instruction: "FIXTURE — not real" },
-    prove: { id: "prove", instruction: "FIXTURE — not real" },
-  },
-  randomization: { seedPolicy: "fixed", pools: [] },
-  tolerances: {},
-  safetyGates: [],
-  rubric: [],
-  remediation: [],
-  estimatedMinutes: 1,
-  accessibility: {
-    keyboardPath: true,
-    screenReaderSummary: "FIXTURE — not real",
-    reducedMotionVariant: true,
-    non3dSteps: ["FIXTURE — not real"],
-  },
-  reviewRequirements: ["accessibility", "instructional_design"],
-  sourcePackageId: "FIXTURE-source",
   status: "approved",
-});
+  authorId: "FIXTURE-author",
+  contentHash: "a".repeat(64),
+  reviewRequirements: ["accessibility", "instructional_design"],
+  hasNonVisualPath: true,
+  claimsLintPassed: true,
+};
 
 const approval = (role: string): Approval => ({
   role,
@@ -41,10 +25,24 @@ const approval = (role: string): Approval => ({
   artifactVersion: 1,
 });
 
+const scenarioApproval = (reviewType: ScenarioApproval["reviewType"]): ScenarioApproval => ({
+  scenarioId: fixtureScenario.scenarioId,
+  version: fixtureScenario.version,
+  contentHash: fixtureScenario.contentHash,
+  reviewType,
+  approverId: `FIXTURE-${reviewType}`,
+  approverKind: "human",
+  decision: "approved",
+  decidedAt: "2026-11-06T00:00:00Z",
+});
+
 describe("publication gates", () => {
   it("rejects a scenario when any required approval is absent", () => {
     expect(
-      canPublishScenario(fixtureScenario, [approval("accessibility"), approval("publisher")]),
+      canPublishScenario(fixtureScenario, [
+        scenarioApproval("accessibility"),
+        scenarioApproval("final_publisher"),
+      ]).ok,
     ).toBe(false);
   });
 

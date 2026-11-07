@@ -1,4 +1,4 @@
-name: M0 governance
+name: M0 and M0.5 governance
 
 on:
   pull_request:
@@ -26,6 +26,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - run: pnpm test:reference
+      - run: pnpm test:integration
       - run: pnpm sim:validate
       - run: pnpm claims:lint
       - run: pnpm ai:eval

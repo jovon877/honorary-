@@ -6,7 +6,14 @@
 /docs/security/ @honorary-homes/security
 /docs/sim-standards/ @honorary-homes/simulation
 /packages/design-tokens/ @honorary-homes/design
+/packages/authorization/ @honorary-homes/security
+/packages/credentials/ @honorary-homes/compliance @honorary-homes/security
+/packages/identity/ @honorary-homes/security
+/packages/publishing/ @honorary-homes/curriculum @honorary-homes/compliance
+/packages/security/src/claims-lint.ts @honorary-homes/compliance
 /packages/sim-content/src/approvals.ts @honorary-homes/curriculum @honorary-homes/compliance
+/db/migrations/ @honorary-homes/data @honorary-homes/security
+/apps/api/ @honorary-homes/backend @honorary-homes/security
 /scripts/claims-lint.ts @honorary-homes/compliance
 /scripts/guard-protected.ts @honorary-homes/owners
 /scripts/license-check.ts @honorary-homes/security @honorary-homes/owners

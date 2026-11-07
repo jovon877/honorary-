@@ -8,9 +8,15 @@ const protectedPrefixes = [
   "docs/security/",
   "docs/sim-standards/",
   "packages/design-tokens/",
+  "packages/authorization/",
+  "packages/credentials/",
+  "packages/publishing/",
+  "packages/security/src/claims-lint.ts",
   "packages/sim-content/src/approvals.ts",
+  "db/migrations/",
   "scripts/claims-lint.ts",
   "scripts/guard-protected.ts",
+  "docs/security/license-exceptions.md",
 ];
 
 const committed = execFileSync("git", ["diff", "--name-only", "main...HEAD"], { encoding: "utf8" });
