@@ -103,7 +103,9 @@ AS $$
       AND member_role = 'instructor'
   )
 $$;
+GRANT CREATE ON SCHEMA academy TO academy_rls_helper;
 ALTER FUNCTION academy.is_cohort_instructor(text) OWNER TO academy_rls_helper;
+REVOKE CREATE ON SCHEMA academy FROM academy_rls_helper;
 GRANT USAGE ON SCHEMA academy TO academy_rls_helper;
 GRANT SELECT ON academy.cohort_members TO academy_rls_helper;
 REVOKE ALL ON FUNCTION academy.is_cohort_instructor(text) FROM PUBLIC;

@@ -19,7 +19,26 @@ const protectedPrefixes = [
   "docs/security/license-exceptions.md",
 ];
 
-const committed = execFileSync("git", ["diff", "--name-only", "main...HEAD"], { encoding: "utf8" });
+function refExists(ref: string): boolean {
+  try {
+    execFileSync("git", ["rev-parse", "--verify", "--quiet", ref], { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const baseCandidates = [
+  process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : undefined,
+  "main",
+  "origin/main",
+].filter((ref): ref is string => Boolean(ref));
+const baseRef = baseCandidates.find(refExists);
+if (!baseRef) throw new Error("guard:protected could not resolve the base branch");
+
+const committed = execFileSync("git", ["diff", "--name-only", `${baseRef}...HEAD`], {
+  encoding: "utf8",
+});
 const working = execFileSync("git", ["diff", "--name-only", "HEAD"], { encoding: "utf8" });
 const untracked = execFileSync("git", ["ls-files", "--others", "--exclude-standard"], {
   encoding: "utf8",
@@ -34,7 +53,7 @@ if (protectedChanges.length === 0) {
 }
 
 const labels = (process.env.PR_LABELS ?? "").split(",").map((label) => label.trim());
-const commitSubjects = execFileSync("git", ["log", "main..HEAD", "--format=%s"], {
+const commitSubjects = execFileSync("git", ["log", `${baseRef}..HEAD`, "--format=%s"], {
   encoding: "utf8",
 });
 const approved =
