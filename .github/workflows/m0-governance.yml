@@ -1,0 +1,49 @@
+name: M0 and M0.5 governance
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: corepack enable
+      - run: corepack prepare pnpm@12.15.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm test:reference
+      - run: pnpm test:integration
+      - run: pnpm sim:validate
+      - run: pnpm claims:lint
+      - run: pnpm ai:eval
+      - run: pnpm guard:protected
+      - run: pnpm guard:approvals
+      - run: pnpm score:determinism
+      - run: pnpm sim:budgets
+      - run: pnpm secrets:scan
+      - run: pnpm deps:licenses
+      - run: pnpm audit --prod
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+
+  runtime-performance:
+    if: ${{ false }}
+    runs-on: [self-hosted, gpu]
+    steps:
+      - run: 'echo "TODO(owner): provision approved GPU/device-lab runner per Simulation Lab §12."'
