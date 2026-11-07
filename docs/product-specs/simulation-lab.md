@@ -302,15 +302,25 @@ Instructors and curriculum staff change scenarios (hazard pools, faults, toleran
 - Pick the newest **stable** release (no alpha, beta, rc, canary or next) that was published at least 14 days ago, and whose package has had a release in the last 12 months.
 - Never guess a version number from memory. Resolve it from the registry and record it.
 
-**License allowlist (checked on the full transitive tree)**
+**License policy v2 (owner-approved amendment, 2026-11-05)**
 
-| Status | Licenses |
-|---|---|
-| Allowed | MIT, ISC, BSD-2-Clause, BSD-3-Clause, Apache-2.0, 0BSD, BlueOak-1.0.0, CC0-1.0, Unlicense |
-| Dev-only (never shipped to the browser bundle) | MPL-2.0 (e.g. axe-core) |
-| Blocked | GPL, AGPL, LGPL, SSPL, BUSL, Commons Clause, CC-BY-NC, any "UNLICENSED" or unknown license |
+The license check scans **two trees separately**:
+- the **shipped tree**: `pnpm licenses list --prod` for `apps/*` browser bundles and `workers/*` runtime;
+- the **dev tree**: everything else, meaning build, lint, test and type tooling that never reaches a learner or a production server.
 
-A blocked or unknown license anywhere in the tree fails CI (`pnpm deps:licenses`). Codex stops and reports it rather than swapping packages on its own.
+| Status | Licenses | Shipped tree | Dev tree |
+|---|---|---|---|
+| Allowed | MIT, MIT-0, ISC, BSD-2-Clause, BSD-3-Clause, Apache-2.0, 0BSD, BlueOak-1.0.0, CC0-1.0, Unlicense, Python-2.0 | ✅ | ✅ |
+| Dev-only | MPL-2.0 (e.g. axe-core, lightningcss), CC-BY-4.0 / CC-BY-3.0 for **data-only** packages (e.g. caniuse-lite) | ❌ fail | ✅ with attribution in `THIRD_PARTY_NOTICES.md` |
+| First-party | `@honorary-homes/*` workspace packages with `"private": true` and `"license": "UNLICENSED"` (proprietary, all rights reserved) | ✅ | ✅ |
+| Blocked | GPL, AGPL, LGPL, SSPL, BUSL, Commons Clause, CC-BY-NC/ND, unknown or missing license on any third-party package | ❌ fail | ❌ fail |
+
+- **Compound licenses** (`A OR B`): pass if any one option is allowed for that tree. (`A AND B`): pass only if all are allowed.
+- **Blocked transitive dependency of an allowed package**: do not allow the license. First, remove it if it's optional or unused (pnpm `overrides` with `"-"`, or `pnpm.ignoredOptionalDependencies`), then prove the parent package still works for the milestone's needs with a test. If it can't be removed, stop and report. The fix is decided by the owner, never by Codex.
+- **Exceptions** must be recorded in `docs/security/license-exceptions.md` with: package, version, license, tree, reason, approver, approval date, review date (maximum 12 months). The checker reads this file. Undocumented exceptions do not exist.
+- Codex never edits the allowlist, the exceptions file or the checker rules unless the task explicitly says so. All three are protected files.
+
+A blocked or unknown license fails CI (`pnpm deps:licenses`). Codex stops and reports rather than swapping packages on its own.
 
 **Record**
 `docs/security/dependencies.md` lists each direct dependency with:
@@ -334,6 +344,8 @@ Run `pnpm audit --prod` and resolve or document every high or critical finding.
 | 3D runtime (empty shell only) | `three`, `@react-three/fiber` | runtime |
 | Scenario runtime | `zod`, `xstate` | runtime |
 | Asset pipeline worker | `@gltf-transform/core`, `@gltf-transform/functions`, `meshoptimizer` | worker runtime |
+
+**`sharp` / libvips is excluded in M0.** M0's asset worker only reads manifests and checks geometry and texture budgets. It does not resize or encode images. If `sharp` or `@img/sharp-*` appears in the tree, remove it with a pnpm override, and add a test proving the budget checker works without it. Texture resizing and KTX2 encoding are deferred to a later milestone, with a decision record weighing two options: a separately installed CLI toolchain outside the npm tree, or an LGPL dynamic-linking exception for the worker only, approved by the owner and reviewed by counsel.
 
 Deferred to later milestones, so not in M0: `@react-three/drei`, `@react-three/rapier`, `@xstate/react`, Storybook, i18n libraries, and Unity packages.
 Never allowed without a decision record: state-management frameworks beyond XState, CSS-in-JS runtimes, UI kits, analytics SDKs, and any AI or ML SDK.
@@ -546,7 +558,10 @@ pnpm deps:licenses     # license allowlist on full dependency tree
 ## Dependencies (see simulation-lab.md §7.6)
 - Exact versions only, lockfile committed, newest stable at least 14 days old.
 - Network only for the npm registry, Node/pnpm and Playwright browsers.
-- Licenses: MIT/ISC/BSD/Apache-2.0/0BSD/BlueOak/CC0/Unlicense. MPL-2.0 is dev-only. Copyleft or unknown = stop and report.
+- Licenses: see §7.6 policy v2. Shipped and dev trees are checked separately.
+  MPL-2.0 and CC-BY data packages are dev-only. First-party @honorary-homes/* = private + UNLICENSED.
+  Blocked transitive deps: remove if optional and prove with a test, else stop and report.
+- sharp/libvips is excluded in M0.
 - Only packages on the milestone's allowed list.
 
 ## Appendix B: Codex task template for each milestone
