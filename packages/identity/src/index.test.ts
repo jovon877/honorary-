@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   FixtureIdentityProvider,
+  InMemoryIdentityProvider,
   assertProviderAllowed,
   hasRecentMfa,
   selectIdentityProvider,
@@ -22,7 +23,7 @@ describe("identity provider boundary", () => {
   });
 
   it("returns marked fixture identities from HttpOnly-cookie-shaped input", async () => {
-    const provider = new FixtureIdentityProvider("test", [identity]);
+    const provider = new InMemoryIdentityProvider("test", [identity]);
     const verified = await provider.verifySession({
       cookieHeader: "fixture_session=FIXTURE-session",
     });

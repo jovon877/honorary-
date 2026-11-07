@@ -139,6 +139,30 @@ export interface IssuerKey {
   publicKey: KeyObject;
 }
 
+/** KMS/HSM boundary. Implementations must keep private key material non-exportable. */
+export interface KmsClient {
+  sign(keyId: string, payload: Uint8Array): Promise<Uint8Array>;
+}
+
+/** Local/test adapter only; it deliberately keeps its fixture key in memory. */
+export class InMemoryKmsClient implements KmsClient {
+  constructor(private readonly keys: ReadonlyMap<string, KeyObject>) {}
+
+  sign(keyId: string, payload: Uint8Array): Promise<Uint8Array> {
+    const key = this.keys.get(keyId);
+    if (!key) throw new Error(`unknown fixture signing key: ${keyId}`);
+    return Promise.resolve(sign(null, Buffer.from(payload), key));
+  }
+}
+
+export async function signCredentialWithKms(
+  payload: CredentialPayload,
+  kms: KmsClient,
+): Promise<SignedCredential> {
+  const signature = await kms.sign(payload.keyId, Buffer.from(canonicalJson(payload)));
+  return { payload, signature: Buffer.from(signature).toString("base64url") };
+}
+
 /** Dev/test only. Production keys live in a KMS/HSM and are never exported. */
 export function generateIssuerKey(keyId: string): IssuerKey {
   const { privateKey, publicKey } = generateKeyPairSync("ed25519");

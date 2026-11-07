@@ -8,6 +8,36 @@
  */
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+/** Private object-storage boundary. Vendor SDKs stay outside catalog logic. */
+export interface ObjectStorage {
+  put(objectKey: string, body: Uint8Array): Promise<void>;
+  get(objectKey: string): Promise<Uint8Array | null>;
+  delete(objectKey: string): Promise<void>;
+}
+
+/** Local/test adapter only; production selects R2 or S3 after ADR approval. */
+export class InMemoryObjectStorage implements ObjectStorage {
+  private readonly objects = new Map<string, Uint8Array>();
+
+  put(objectKey: string, body: Uint8Array): Promise<void> {
+    validateObjectKey(objectKey);
+    this.objects.set(objectKey, Uint8Array.from(body));
+    return Promise.resolve();
+  }
+
+  get(objectKey: string): Promise<Uint8Array | null> {
+    validateObjectKey(objectKey);
+    const body = this.objects.get(objectKey);
+    return Promise.resolve(body ? Uint8Array.from(body) : null);
+  }
+
+  delete(objectKey: string): Promise<void> {
+    validateObjectKey(objectKey);
+    this.objects.delete(objectKey);
+    return Promise.resolve();
+  }
+}
+
 export interface CourseVersionRow {
   courseId: string;
   sku: string;
@@ -63,13 +93,18 @@ export function signAssetUrl(
 ): string {
   validateSignerConfig(cfg);
   if (!/^[A-Za-z0-9._:@-]{1,128}$/.test(userId)) throw new Error("invalid learner id");
-  if (!/^[A-Za-z0-9/_.-]+$/.test(objectKey) || objectKey.includes(".."))
-    throw new Error("invalid object key");
+  validateObjectKey(objectKey);
   const exp = nowSeconds + cfg.ttlSeconds;
   const sig = createHmac("sha256", cfg.secret)
     .update(`${objectKey}\n${userId}\n${exp}`)
     .digest("base64url");
   return `${cfg.assetOrigin}/${objectKey}?u=${encodeURIComponent(userId)}&exp=${exp}&sig=${sig}`;
+}
+
+function validateObjectKey(objectKey: string): void {
+  if (!/^[A-Za-z0-9/_.-]+$/.test(objectKey) || objectKey.includes("..")) {
+    throw new Error("invalid object key");
+  }
 }
 
 export function verifyAssetUrl(

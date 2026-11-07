@@ -82,6 +82,9 @@ export class FixtureIdentityProvider implements IdentityProvider {
   }
 }
 
+/** Explicit in-memory adapter name for dependency injection in local/test hosts. */
+export class InMemoryIdentityProvider extends FixtureIdentityProvider {}
+
 function parseFixtureSession(cookieHeader: string | undefined): string | null {
   if (!cookieHeader) return null;
   for (const item of cookieHeader.split(";")) {

@@ -2,29 +2,23 @@
  * Runs the real SQL migrations against Postgres (PGlite, in-process WASM Postgres)
  * and proves RLS, immutability and append-only rules hold at the database layer.
  */
-import { beforeAll, describe, expect, it } from "vitest";
-import { PGlite } from "@electric-sql/pglite";
-import { readMigrations } from "@honorary-homes/database";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { DbClient } from "@honorary-homes/database";
+import { createDbTestHarness, type DbTestHarness } from "./db-test-harness.js";
 
-let db: PGlite;
+let db: DbClient;
+let harness: DbTestHarness;
 type TestRow = Record<string, unknown>;
-type TestQuery = (sql: string, parameters?: unknown[]) => Promise<TestRow[]>;
+type TestQuery = (sql: string, parameters?: readonly unknown[]) => Promise<TestRow[]>;
 
 /** Run statements as the app role with a given identity, inside a transaction. */
 async function as<T>(userId: string, roles: string, fn: (q: TestQuery) => Promise<T>) {
-  return db.transaction(async (tx) => {
-    await tx.query(`SET LOCAL ROLE app_rw`);
-    await tx.query(
-      `SELECT set_config('app.user_id', $1, true), set_config('app.roles', $2, true)`,
-      [userId, roles],
-    );
-    return fn(async (s, p) => (await tx.query<TestRow>(s, p)).rows);
-  });
+  return harness.asRole("app_rw", userId, roles, null, fn);
 }
 
 beforeAll(async () => {
-  db = await PGlite.create();
-  for (const migration of await readMigrations()) await db.exec(migration.sql);
+  harness = await createDbTestHarness("reference-db");
+  db = harness.owner;
   // Fixture data (FIXTURE — not real)
   await db.exec(`
     INSERT INTO academy.orgs VALUES ('org1','FIXTURE Org','internal',false);
@@ -48,6 +42,10 @@ beforeAll(async () => {
              ('00000000-0000-4000-8000-000000000002','L2',NULL,'SIM-110',1,'practice',7,0.5,false);
   `);
 }, 60_000);
+
+afterAll(async () => {
+  if (harness) await harness.close();
+});
 
 describe("catalog seed", () => {
   it("seeds 11 sim-hosting courses (10 still draft after fixture publishes one) and 19 simulation lessons", async () => {
@@ -119,7 +117,7 @@ describe("row-level security on training records", () => {
     expect(ok[0]!.learner_id).toBe("L1");
   });
   it("app role has no access to the housing schema", async () => {
-    await db.exec(`CREATE TABLE IF NOT EXISTS housing.leases (id int)`);
+    await db.query(`CREATE TABLE IF NOT EXISTS housing.leases (id int)`);
     await expect(as("L1", "learner", (q) => q(`SELECT * FROM housing.leases`))).rejects.toThrow(
       /permission denied/,
     );

@@ -117,7 +117,7 @@ function loadReport(target: Tree): PnpmLicenseReport {
   const pnpm = process.env.npm_execpath ?? "pnpm";
   const args =
     target === "prod"
-      ? ["--filter", "./apps/*", "--filter", "./workers/*", "licenses", "list", "--prod", "--json"]
+      ? ["--recursive", "licenses", "list", "--prod", "--json"]
       : ["licenses", "list", "--json"];
   const output = execFileSync(pnpm, args, {
     encoding: "utf8",

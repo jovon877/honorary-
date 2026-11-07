@@ -1,0 +1,87 @@
+name: Database integration
+
+on:
+  pull_request:
+    paths:
+      - db/**
+      - packages/database/**
+      - packages/authorization/**
+      - packages/credentials/**
+      - packages/sim-xapi/**
+      - tests/backend/**
+      - .github/workflows/db-integration.yml
+  schedule:
+    - cron: "17 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-integration-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pglite:
+    name: PGlite contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: corepack enable
+      - run: corepack prepare pnpm@12.15.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - name: Run the database suite
+        run: pnpm test:db
+      - name: Rerun the same suite
+        run: pnpm test:db
+
+  postgres:
+    name: PostgreSQL 17 contract
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        # Official image index recorded by docker-library/repo-info. Digest pin is intentional.
+        image: postgres:17-bookworm@sha256:665dc7b37ac52a17e298511414c21d23ffa4e6a6ef6225b3e5d59c7afb35e994
+        env:
+          POSTGRES_PASSWORD: FIXTURE-ci-postgres-only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGPASSWORD: FIXTURE-ci-postgres-only
+      DATABASE_OWNER_URL: postgresql://migration_owner:FIXTURE-ci-owner-only@127.0.0.1:5432/postgres
+      DATABASE_URL: postgresql://app_login:FIXTURE-ci-app-only@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: corepack enable
+      - run: corepack prepare pnpm@12.15.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - name: Bootstrap non-superuser database roles
+        run: |
+          psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d postgres <<'SQL'
+          CREATE ROLE migration_owner LOGIN CREATEDB CREATEROLE NOSUPERUSER NOBYPASSRLS PASSWORD 'FIXTURE-ci-owner-only';
+          CREATE ROLE app_rw NOLOGIN NOSUPERUSER NOBYPASSRLS;
+          CREATE ROLE app_login LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD 'FIXTURE-ci-app-only';
+          CREATE ROLE commerce_writer NOLOGIN NOSUPERUSER NOBYPASSRLS;
+          CREATE ROLE credential_issuer NOLOGIN NOSUPERUSER NOBYPASSRLS;
+          CREATE ROLE academy_rls_helper NOLOGIN NOSUPERUSER BYPASSRLS;
+          GRANT app_rw TO app_login;
+          GRANT app_rw, commerce_writer, credential_issuer, academy_rls_helper TO migration_owner WITH ADMIN OPTION;
+          SQL
+      - name: Run the database suite as app_login
+        run: pnpm test:db
+      - name: Rerun the same suite
+        run: pnpm test:db

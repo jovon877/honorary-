@@ -1,12 +1,13 @@
-import { beforeAll, describe, expect, it } from "vitest";
-import { PGlite } from "@electric-sql/pglite";
-import { readMigrations } from "@honorary-homes/database";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { DbClient } from "@honorary-homes/database";
+import { createDbTestHarness, type DbTestHarness } from "./db-test-harness.js";
 
-let db: PGlite;
+let db: DbClient;
+let harness: DbTestHarness;
 
 type DatabaseRole = "app_rw" | "commerce_writer" | "credential_issuer";
 type TestRow = Record<string, unknown>;
-type TestQuery = (sql: string, parameters?: unknown[]) => Promise<TestRow[]>;
+type TestQuery = (sql: string, parameters?: readonly unknown[]) => Promise<TestRow[]>;
 
 async function asRole<T>(
   databaseRole: DatabaseRole,
@@ -15,21 +16,12 @@ async function asRole<T>(
   mfaVerifiedAt: number | null,
   run: (query: TestQuery) => Promise<T>,
 ): Promise<T> {
-  return db.transaction(async (transaction) => {
-    await transaction.query(`SET LOCAL ROLE ${databaseRole}`);
-    await transaction.query(
-      `SELECT set_config('app.user_id', $1, true),
-              set_config('app.roles', $2, true),
-              set_config('app.mfa_verified_at', $3, true)`,
-      [userId, roles, mfaVerifiedAt?.toString() ?? ""],
-    );
-    return run(async (sql, parameters) => (await transaction.query<TestRow>(sql, parameters)).rows);
-  });
+  return harness.asRole(databaseRole, userId, roles, mfaVerifiedAt, run);
 }
 
 beforeAll(async () => {
-  db = await PGlite.create();
-  for (const migration of await readMigrations()) await db.exec(migration.sql);
+  harness = await createDbTestHarness("m0-5-controls");
+  db = harness.owner;
   await db.exec(`
     INSERT INTO academy.orgs VALUES ('FIXTURE-org','FIXTURE — not real','internal',false);
     INSERT INTO academy.users (id, org_id, display_name) VALUES
@@ -45,6 +37,10 @@ beforeAll(async () => {
       VALUES ('SIM-999', 1, 'draft', 'les_sim110', 'ENV-NE-01', '{}', repeat('c', 64));
   `);
 }, 60_000);
+
+afterAll(async () => {
+  if (harness) await harness.close();
+});
 
 describe("M0.5 database controls", () => {
   it("starts the owner-managed objective and region registries empty", async () => {

@@ -1,4 +1,4 @@
-# Dependency Record — M0 and M0.5
+# Dependency Record — M0, M0.5 and database integration
 
 Resolved from `registry.npmjs.org` on 2026-11-06. The eligibility cutoff was 2026-10-23T06:44:02Z. Versions are exact; TypeScript 6.0.3 is the newest eligible release compatible with `typescript-eslint` 8.72.0. Node release data came from `nodejs.org`.
 
@@ -46,12 +46,13 @@ Resolved from `registry.npmjs.org` on 2026-11-06. The eligibility cutoff was 202
 | `@gltf-transform/core` | 4.5.1 | 2026-09-28 | MIT | glTF document boundary | asset worker; worker runtime |
 | `@gltf-transform/functions` | 4.5.1 | 2026-09-28 | MIT | Approved future glTF transforms | asset worker; worker runtime |
 | `meshoptimizer` | 1.3.0 | 2026-09-25 | MIT | Meshopt readiness | asset worker; worker runtime |
+| `pg` | 8.23.1 | 2026-09-30 | MIT | PostgreSQL pool behind `DbClient` when `DATABASE_URL` is set | database package; server runtime |
 
 `sharp` is removed with the owner-approved pnpm override required by Simulation Lab §7.6. The M0 worker does not resize or encode images.
 
 ## Verification record
 
-- `pnpm deps:licenses:prod`: passed, 34 package versions.
+- `pnpm deps:licenses:prod`: passed, 50 package versions.
 - `pnpm deps:licenses:dev`: passed, 245 package versions.
-- `pnpm audit --prod`: passed on 2026-11-06; 0 info, low, moderate, high or critical vulnerabilities across 51 reported production/optional dependencies.
+- `pnpm audit --prod`: passed on 2026-11-07; 0 info, low, moderate, high or critical vulnerabilities across 65 reported production/optional dependencies.
 - `docs/security/license-exceptions.md`: empty; no exception was used.

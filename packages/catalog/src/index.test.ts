@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { signAssetUrl, verifyAssetUrl, type SignerConfig } from "./index.js";
+import { InMemoryObjectStorage, signAssetUrl, verifyAssetUrl, type SignerConfig } from "./index.js";
 
 const config: SignerConfig = {
   secret: randomBytes(32),
@@ -9,6 +9,17 @@ const config: SignerConfig = {
 };
 
 describe("asset URL boundary", () => {
+  it("keeps private objects behind a copy-safe in-memory adapter", async () => {
+    const storage = new InMemoryObjectStorage();
+    const source = new Uint8Array([1, 2, 3]);
+    await storage.put("sims/FIXTURE.glb", source);
+    source[0] = 9;
+    expect(await storage.get("sims/FIXTURE.glb")).toEqual(new Uint8Array([1, 2, 3]));
+    await storage.delete("sims/FIXTURE.glb");
+    expect(await storage.get("sims/FIXTURE.glb")).toBeNull();
+    expect(() => storage.put("../secret", source)).toThrow(/invalid object key/);
+  });
+
   it("requires a private-asset-safe HTTPS origin and a 5–15 minute lifetime", () => {
     expect(() =>
       signAssetUrl(
