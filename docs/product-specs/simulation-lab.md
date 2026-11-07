@@ -483,6 +483,21 @@ Decisions are recorded in `docs/governance/reviews/YYYY-MM.md`.
 - **Visual QA checklist per environment**: correct scale, no impossible construction, no unsafe conduct shown as normal, no readable brand marks, no stereotyped characters, and lighting continuity across condition states.
 - **Usability**: a 5-learner moderated test of SIM-110 before building SIM-121. At least two testers should be low digital-literacy adults, and at least one should be on a phone.
 
+### 12.1 Real PostgreSQL integration (CI, not the Codex sandbox)
+
+PGlite is the fast local check. Real Postgres is the release gate.
+
+- **Workflow:** `.github/workflows/db-integration.yml` runs on every PR that touches `db/`, `packages/database/`, `packages/authorization/`, `packages/credentials/` or `packages/sim-xapi/`, and nightly on `main`.
+- **Database:** a GitHub Actions `services: postgres` container, **pinned by image digest** (not a tag). Use the same Postgres major version as the production Neon project (see `INTEGRATION_GAPS.md` row 17). GitHub's runner downloads the image, so the Codex network allowlist does not apply. Codex writes the workflow but never pulls the image itself.
+- **Realism the local tests can't give:**
+  1. Run the migrations as an owner role, not as `postgres`.
+  2. Create a login role `app_login` with `NOSUPERUSER NOBYPASSRLS` that is a member of `app_rw`, and run every RLS test **connected as `app_login`**.
+  3. Assert from `pg_roles` that `app_login` can't bypass RLS.
+  4. Run the whole suite twice (migrations applied on a fresh database, then re-run) to prove the migrations are idempotent where they are meant to be.
+  5. Run a concurrency test: two transactions inserting the same xAPI statement id, where exactly one succeeds.
+- **One test suite, two engines:** tests take a `DbClient` interface. `DATABASE_URL` set means real Postgres through `pg` (MIT, allowed for this milestone). Unset means PGlite. The same assertions must pass on both.
+- **Status rule:** until the first green run on GitHub, the completion report lists this item as **not verified**. After it passes, link the run URL in `INTEGRATION_GAPS.md`.
+
 ## 13. Milestones (narrow, testable)
 
 **M0: Foundations.** `sim-core`, `sim-content` schemas, `sim-xapi`, the asset pipeline worker, the performance budget CI, and an empty sim-player embedded in the learning player. M0 also sets up the §10.4 governance checks: claims linter, protected-file guard, approval-gate tests, determinism test harness, and the `CODEOWNERS` entries. *No content.*
