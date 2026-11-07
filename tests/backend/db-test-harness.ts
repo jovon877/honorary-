@@ -69,25 +69,30 @@ async function runAsRole<T>(
 export async function createDbTestHarness(suiteName: string): Promise<DbTestHarness> {
   const appBaseUrl = process.env.DATABASE_URL;
   const ownerBaseUrl = process.env.DATABASE_OWNER_URL;
+  const fixtureBaseUrl = process.env.DATABASE_FIXTURE_URL;
   let admin: DbClient | undefined;
+  let migration: DbClient;
   let owner: DbClient;
   let app: DbClient;
   let testDatabaseName: string | undefined;
 
   if (appBaseUrl) {
     if (!ownerBaseUrl) throw new Error("DATABASE_OWNER_URL is required with DATABASE_URL");
+    if (!fixtureBaseUrl) throw new Error("DATABASE_FIXTURE_URL is required with DATABASE_URL");
     testDatabaseName = safeDatabaseName(suiteName);
     admin = await createDbClient({ databaseUrl: ownerBaseUrl });
     await admin.query(`CREATE DATABASE "${testDatabaseName}"`);
-    owner = await createDbClient({ databaseUrl: databaseUrl(ownerBaseUrl, testDatabaseName) });
+    migration = await createDbClient({ databaseUrl: databaseUrl(ownerBaseUrl, testDatabaseName) });
+    owner = await createDbClient({ databaseUrl: databaseUrl(fixtureBaseUrl, testDatabaseName) });
     app = await createDbClient({ databaseUrl: databaseUrl(appBaseUrl, testDatabaseName) });
   } else {
     owner = await createDbClient();
+    migration = owner;
     app = owner;
   }
 
-  const firstMigrationRun = await runMigrations(owner);
-  const secondMigrationRun = await runMigrations(owner);
+  const firstMigrationRun = await runMigrations(migration);
+  const secondMigrationRun = await runMigrations(migration);
 
   return {
     owner,
@@ -99,8 +104,7 @@ export async function createDbTestHarness(suiteName: string): Promise<DbTestHarn
       return runAsRole(client, databaseRole, userId, roles, mfaVerifiedAt, run);
     },
     async close() {
-      if (app !== owner) await app.close();
-      await owner.close();
+      for (const client of new Set([app, owner, migration])) await client.close();
       if (admin && testDatabaseName) {
         await admin.query(
           "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()",
