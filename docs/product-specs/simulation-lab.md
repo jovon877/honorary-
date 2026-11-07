@@ -185,7 +185,7 @@ For every sim, write out: learner problem, measurable objectives (Bloom level, m
 |---|---|---|
 | ENV-NE-01 | 1890s–1920s New England wood-frame house, mid-rehab: plaster and lath, balloon framing, fieldstone basement, knob-and-tube remnants | Vermont / Maine sims, Hazard Hunt, Scope Before Demo |
 | ENV-RH-01 | Brick rowhouse, party walls, rear additions, vacant-property condition | Baltimore and mid-Atlantic sims |
-| ENV-MW-01 | Early-1900s brick/frame two-flat | Midwest expansion markets (only if those regions are activated) |
+| ENV-MW-01 | Early-1900s brick/frame two-flat | St. Louis, Cleveland, Detroit (active per owner decision 2026-11-06) |
 | ENV-APT-01 | 2-bedroom apartment unit, vacant, turnover condition | Turnover, Work Order Desk, Inspection Readiness |
 | ENV-SHOP-01 | Training shop / framing bay | Measure and Layout, Frame a Wall, Tool Wall |
 
@@ -487,6 +487,10 @@ Decisions are recorded in `docs/governance/reviews/YYYY-MM.md`.
 
 **M0: Foundations.** `sim-core`, `sim-content` schemas, `sim-xapi`, the asset pipeline worker, the performance budget CI, and an empty sim-player embedded in the learning player. M0 also sets up the §10.4 governance checks: claims linter, protected-file guard, approval-gate tests, determinism test harness, and the `CODEOWNERS` entries. *No content.*
 
+**M0.5: Back end, security and credentials.** Adopt the owner-supplied reference package (§16–§18): Postgres migrations with RLS, authorization policy, publish gate, xAPI ingestion, audit log, rate limiting, security headers, claims linter, redaction, catalog/entitlement service, signed asset URLs and the credentials engine. All 45 reference tests must stay green inside the monorepo. *No UI beyond health and verification endpoints.*
+
+**M0.6: Learning host and minimal admin.** `apps/learning`: course dashboard, lesson page with embedded `<SimPlayer>`, progress and completion (Academy spec §32). `apps/admin`: review queue, approval recording, publish with step-up MFA, audit viewer. Uses the M0.5 back end; no new security model.
+
 **M1: SIM-110 Hazard Hunt, end to end.** ENV-NE-01 (as-found), 25-hazard pool with 10 drawn per attempt, PPE gate, Learn/Practice/Prove, scoring, replay, results screen, non-3D path, xAPI, completion rule, admin preview and approval flow.
 
 **M2: SIM-121 Frame a Wall.** ENV-SHOP-01, physics placement, virtual tape, level and square, tolerance grading, the consequence system (drywall gap), and the remediation link.
@@ -512,6 +516,110 @@ Each milestone task must state: source spec section, scope, out-of-scope, accept
 4. Before reporting done: format, lint, typecheck, unit, integration, the performance CI dry run, and a production build. Then report files changed, commands run, results, decisions, security implications, limitations, and the recommended next task.
 
 Do not build M1 content, Unity projects, checkout or AI generation in this task. Do not invent course content, partners, statistics or properties.
+
+## 15. Full-stack team and ownership
+
+Codex works as the implementation engineer for this team. Each role owns code paths through `CODEOWNERS`, and Codex's pull requests need the owning role's review.
+
+| Role | Owns | Accountable for |
+|---|---|---|
+| **Engineering Lead / Principal Architect** | `ARCHITECTURE.md`, `docs/architecture-decisions/`, monorepo config | Boundaries, ADRs, release approval, drift review |
+| **Senior Back-end Engineer** | `apps/api/`, `packages/catalog/`, `packages/authorization/`, `packages/publishing/` | API contracts, entitlements, authorization, publish gates |
+| **Senior Data Engineer** | `db/migrations/`, `packages/database/`, `packages/sim-xapi/`, `workers/analytics-export/` | Schema, RLS, migrations, data contracts, xAPI pipeline, retention, warehouse |
+| **Security Engineer (AppSec)** | `packages/security/`, `docs/security/`, CI security gates | Threat model, headers, rate limits, secrets, dependency/license policy, pen-test findings |
+| **Senior Front-end / Web Engineer** | `apps/web/`, `apps/learning/`, `packages/ui/`, `packages/design-tokens/` | Performance, accessibility, design-system fidelity |
+| **Real-time 3D Engineer** | `apps/sim-player/`, `packages/sim-core/`, `packages/sim-ui/` | Sim runtime, determinism, frame budgets |
+| **Technical Artist** | `packages/sim-assets/`, `workers/sim-asset-pipeline/` | Asset budgets, materials, environment fidelity |
+| **DevOps / SRE** | `infrastructure/`, `.github/workflows/`, runbooks | Environments, deploys, backups, observability, incident response |
+| **QA / Test Engineer** | `packages/testing/`, `e2e/` | Test strategy, E2E, accessibility and device testing |
+| **Credentials & Compliance Lead** | `packages/credentials/`, `docs/compliance/`, claims-lint rules | Credential definitions, accreditation records, claims language, audits |
+| **Instructional Design Lead** | `docs/curriculum-standards/`, `docs/sim-standards/` | Objectives, rubrics, remediation |
+| **Product Owner (Talen / owner)** | `docs/product-specs/` | Scope, priorities, final decisions on gaps |
+
+Until each seat is filled, the owner holds that review. Any seat left unfilled is listed in `INTEGRATION_GAPS.md`.
+
+## 16. Back-end and data architecture
+
+**Services**
+- `apps/api` (Node, TypeScript, inside the Next.js app or as a separate service):
+  - catalog;
+  - entitlements and simulation load;
+  - xAPI ingest;
+  - attempts;
+  - approvals and publishing;
+  - credentials;
+  - the public `/verify/[credentialId]`.
+- **Commerce service:** a separate role. It writes enrollments from verified Stripe webhooks only.
+- **Credential issuer:** a separate role. It is the only principal that can insert into `credentials.issued`, and it signs through KMS.
+- **Housing/property services** live in a separate schema, role and service. They never join to training data.
+
+**Database (Postgres)**
+- Schemas: `academy` (catalog, scenarios, approvals), `training` (attempts, xAPI), `credentials`, `audit`, `housing`.
+- The app connects as `app_rw`, which uses `NOBYPASSRLS` and doesn't own tables. Identity is set per transaction with `SET LOCAL app.user_id` and `app.roles`, from the verified session only.
+- Row-level security is enabled and forced on every table that holds learner data.
+- Published versions are immutable (enforced by triggers). Changes create a new version.
+- The audit log is append-only and hash-chained in the app (`verifyChain`), as well as enforced by a database trigger.
+- Migrations are forward-only, reviewed by the Data Engineer, and tested against real Postgres in CI (PGlite locally, a Postgres container in CI).
+
+**Data contracts and pipeline**
+- xAPI statements are validated with a strict schema at ingest: verb allowlist, no unknown keys, actor must equal the authenticated user, statement id as the idempotency key, timestamp-skew window, and a 16 KB size cap.
+- Analytics and the warehouse receive **pseudonymized, aggregated** exports only. They never see free-text responses, names, emails or third-party credential numbers.
+- **Retention:**
+  - xAPI raw: 3 years;
+  - attempts: life of the account plus 3 years;
+  - credentials: permanent (the revocation record is kept);
+  - audit: 7 years.
+  All four periods are configurable, and owner and counsel confirm them before launch.
+- Learner data export and deletion requests are handled by a documented job. Issued credentials are revoked, not deleted, and keep a tombstone record.
+
+## 17. Security requirements
+
+| Area | Control |
+|---|---|
+| Authentication | OIDC or a managed identity provider, passkeys or TOTP MFA, **step-up MFA within 15 minutes** for publish, approve, sign-off, audit read and kill switch. Sessions in HttpOnly, Secure, SameSite=Lax cookies. Never use localStorage for tokens. |
+| Authorization | Deny by default. Explicit denies win: property and housing staff never see training data. Separation of duties: authors can't approve or publish their own work, and publishing needs two or more distinct human approvers. AI service principals can only draft. Platform admins can't read private learner responses. |
+| Input | Validate every boundary with Zod. Enforce strict schemas and size limits. Use parameterized SQL only. |
+| Transport & headers | HSTS preload, strict CSP with nonces (`'wasm-unsafe-eval'` for physics, never `'unsafe-eval'` or `'unsafe-inline'`), COOP, CORP, nosniff, and a locked-down Permissions-Policy. |
+| Assets | Private bucket. Short-lived HMAC-signed URLs per learner and object (5–15 minutes), with path traversal rejected. Drafts return 404, not 403, so they can't be discovered. |
+| Abuse | Token-bucket rate limits backed by Redis: login 5/min, xAPI 120 burst, AI generation 10/hour. |
+| Secrets | A secrets manager with rotation every 90 days. Credential-signing keys stay in KMS or HSM and are never exported. Secret scanning runs in CI. |
+| Privacy | Redact PII before any AI call or log. Keep training data separate from housing data. Show learner notice before any org-level individual access. |
+| Supply chain | §7.6 policy. Lockfile, license check, `pnpm audit`, SBOM (CycloneDX) per release, and signed commits on `main`. |
+| Monitoring | Alert on spikes in authorization denials, xAPI rejections, audit-chain verification failures, a publish without full approvals (which should be impossible, so this is a P1), and credential verification failures. |
+| Assurance | A threat model (`docs/security/threat-model.md`, STRIDE) before M1, an external penetration test before public launch, an annual review, and an incident runbook with breach-notification steps confirmed by counsel. |
+
+## 18. Credentials and certifications
+
+Honorary Homes issues **only what it can stand behind**. It records and verifies everything else.
+
+| Credential | Issuer | Requirements | Expiry |
+|---|---|---|---|
+| **Certificate of Completion** (per course) | Honorary Homes Academy | Course completion rules met (Academy spec §20.3) | Safety courses 2 years; others none |
+| **Simulation Competency Badge** (Open Badges 3.0) | Honorary Homes Academy | Passing Prove attempts on the listed sims, replay-verifiable | 1 year for safety sims |
+| **Ready for Crew** | Honorary Homes (internal) | Required sims passed **and** in-person sign-off by the learner's instructor (not the learner) | 1 year |
+| **On-the-Job Learning Record** | Honorary Homes | Supervisor-verified hours by work process. Maximum 16 hours per day. A supervisor can't verify their own hours | None |
+| **OSHA Outreach 10/30, EPA RRP Renovator, NCCER, first aid/CPR** | The outside body | Honorary Homes delivers the training **only** with a current, compliance-verified accreditation record for that credential type and jurisdiction. Otherwise "prepares you for" language only | Per issuer |
+| **Registered Apprenticeship completion** | DOL or State Apprenticeship Agency | Honorary Homes is a registered sponsor (verified record), with the OJT hours and related instruction mapped to the registered work-process schedule | Per issuer |
+
+**Rules**
+- Every issued credential is Ed25519-signed through KMS and verifiable at `/verify/[credentialId]`, which shows valid, expired, revoked or invalid. It's revocable once, with a reason and the revoker recorded, and never deleted or edited.
+- Public credential payloads carry an opaque subject id. They never include an email, birthdate or credential number.
+- Third-party credentials a learner earned elsewhere start as `unverified`. Only a compliance reviewer can mark one `verified_primary_source`, with an evidence document, and only verified, unexpired credentials display as held.
+- Every credential definition carries a disclaimer (minimum 20 characters) and must pass the claims linter. "Certified" or "licensed" wording is allowed only on a third-party credential with a verified accreditation record, and only with compliance approval.
+- **Accreditation roadmap** (owner decisions, tracked in `INTEGRATION_GAPS.md`):
+  - become an OSHA Outreach Training Program provider, through authorized trainers on staff;
+  - an EPA RRP accredited training provider, or partner with one;
+  - an NCCER Accredited Training Sponsor;
+  - a Registered Apprenticeship sponsor in each active state.
+  Until a record exists, the system blocks delivery claims automatically.
+
+## 19. Brand decision (owner-supplied logo, 2026-11-06)
+
+The owner supplied the official Honorary Homes logo: a gold serif "H" monogram over the **HONORARY HOMES** wordmark, with a thin gold rule, on white. It is stored at `docs/brand/honorary-homes-logo.png`.
+
+- This supports the **Academy light theme** (white / obsidian / warm ivory / restrained heritage gold, Academy spec §13.3). Make `academy-light` the default token theme. Keep `living-ledger` as a non-default provisional file until the owner retires it.
+- Logo gold measures about **`#BCAC84`**, which is only **2.2:1 on white**. That fails WCAG for both text (4.5:1) and UI indicators (3:1). Use `#BCAC84` as `gold.mark` for the logo, rules and decorative lines only. Derive a darker `gold.text` token that reaches at least 4.5:1 on white for any gold text, and never rely on gold alone for focus or active states (use obsidian or an outline as well). Verify both tokens with a contrast test in CI.
+- Use the logo file as supplied. Never redraw, recolor, add gradients or metallic effects to it, or generate variants of it with AI.
 
 # END OF PROMPT
 
