@@ -4,7 +4,12 @@ DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_login') THEN
     CREATE ROLE app_login LOGIN NOSUPERUSER NOBYPASSRLS;
   END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_roles
+    WHERE rolname = 'app_login' AND (rolsuper OR rolbypassrls)
+  ) THEN
+    RAISE EXCEPTION 'app_login must remain NOSUPERUSER NOBYPASSRLS';
+  END IF;
 END $$;
 
-ALTER ROLE app_login NOSUPERUSER NOBYPASSRLS;
 GRANT app_rw TO app_login;
