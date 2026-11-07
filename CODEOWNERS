@@ -1,0 +1,13 @@
+# Protected product and governance sources (Simulation Lab §0A and §10.3)
+/AGENTS.md @honorary-homes/owners
+/docs/product-specs/ @honorary-homes/owners
+/docs/curriculum-standards/ @honorary-homes/curriculum
+/docs/media-standards/ @honorary-homes/media
+/docs/security/ @honorary-homes/security
+/docs/sim-standards/ @honorary-homes/simulation
+/packages/design-tokens/ @honorary-homes/design
+/packages/sim-content/src/approvals.ts @honorary-homes/curriculum @honorary-homes/compliance
+/scripts/claims-lint.ts @honorary-homes/compliance
+/scripts/guard-protected.ts @honorary-homes/owners
+/scripts/license-check.ts @honorary-homes/security @honorary-homes/owners
+/THIRD_PARTY_NOTICES.md @honorary-homes/security

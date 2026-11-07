@@ -1,0 +1,31 @@
+{
+  "name": "@honorary-homes/sim-player",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": "26.13.0"
+  },
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@honorary-homes/config": "workspace:0.0.0",
+    "@honorary-homes/sim-ui": "workspace:0.0.0",
+    "@honorary-homes/sim-xapi": "workspace:0.0.0",
+    "@react-three/fiber": "9.8.2",
+    "react": "19.1.10",
+    "react-dom": "19.1.10",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/three": "0.186.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "vite": "8.3.5"
+  }
+}

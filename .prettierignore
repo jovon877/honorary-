@@ -1,0 +1,6 @@
+docs/product-specs/
+docs/product-specs/source/
+node_modules/
+dist/
+coverage/
+pnpm-lock.yaml

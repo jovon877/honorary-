@@ -1,0 +1,6 @@
+{
+  "id": "FIXTURE-empty-shell",
+  "initialDownloadMb": 0,
+  "desktop": { "drawCalls": 0, "triangles": 0, "textureMemoryMb": 0 },
+  "mobile": { "drawCalls": 0, "triangles": 0, "textureMemoryMb": 0 }
+}
